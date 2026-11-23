@@ -1,65 +1,269 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>나만의 중고마켓</title>
-    <link rel="stylesheet" href="https://s3.ap-northeast-2.amazonaws.com/materials.spartacodingclub.kr/easygpt/default.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-        crossorigin="anonymous"></script>
-    <style>
-        /* 꾸미기 */
-
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>키즈나눔마켓</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+    crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --main: #ff8a3d;
+      --main-dark: #e8701f;
+      --free: #2fb67c;
+      --donate: #6c63ff;
+      --cheap: #ff8a3d;
+      --bg: #fffaf5;
+    }
+    body { background: var(--bg); font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    .hero { background: linear-gradient(135deg, #ffb36b, #ff8a3d); color: #fff; border-radius: 0 0 28px 28px; }
+    .hero h1 { font-weight: 800; }
+    .btn-main { background: var(--main); color: #fff; border: none; }
+    .btn-main:hover { background: var(--main-dark); color: #fff; }
+    .chip { border: 1px solid #ffd3b0; background: #fff; color: #444; border-radius: 999px; padding: 6px 14px; font-size: 14px; white-space: nowrap; }
+    .chip.active { background: var(--main); border-color: var(--main); color: #fff; }
+    .chip-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .item-card { border: none; border-radius: 18px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.06); height: 100%; }
+    .item-thumb { height: 140px; display: flex; align-items: center; justify-content: center; font-size: 64px; background: #fff1e4; }
+    .badge-free { background: var(--free); }
+    .badge-donate { background: var(--donate); }
+    .badge-cheap { background: var(--cheap); }
+    .price { font-weight: 800; font-size: 18px; }
+    .meta { font-size: 13px; color: #888; }
+    .locker-step { background: #fff; border-radius: 18px; padding: 20px; height: 100%; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .locker-step .num { width: 32px; height: 32px; border-radius: 50%; background: var(--main); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    .fab { position: fixed; right: 18px; bottom: 22px; border-radius: 999px; padding: 14px 20px; font-weight: 700; box-shadow: 0 6px 18px rgba(255,138,61,.45); z-index: 10; }
+    .stat { font-size: 26px; font-weight: 800; }
+  </style>
 </head>
 
 <body>
-    <div class="hero bg-dark text-center py-5">
-        <h1 class="text-white">나만의 르탄마켓</h1>
-        <h2 class="text-white">집에 있는 물건을 팝니다!</h2>
+  <!-- 상단 소개 -->
+  <header class="hero text-center py-5 px-3 mb-4">
+    <div style="font-size:48px">🧸</div>
+    <h1 class="mb-2">키즈나눔마켓</h1>
+    <p class="mb-3">버려지는 장난감·유아용품,<br>이웃 아이에게 다시 쓰여요.<br>무료나눔 · 기부 · 저렴한 거래</p>
+    <div class="row justify-content-center g-2" style="max-width:420px;margin:0 auto">
+      <div class="col-4"><div class="stat" id="statFree">0</div><small>무료나눔</small></div>
+      <div class="col-4"><div class="stat" id="statDonate">0</div><small>기부</small></div>
+      <div class="col-4"><div class="stat" id="statCheap">0</div><small>저렴하게</small></div>
     </div>
-    <div class="container">
-        <div class="row">
-          <div class="col-md-4 mb-4">
-            <div class="card">
-              <img src="https://source.unsplash.com/1600x900/?rice-cooker" class="card-img-top" alt="전기밥솥">
-              <div class="card-body">
-                <h5 class="card-title">전기밥솥</h5>
-                <h6 class="card-subtitle mb-2 text-muted">5만원</h6>
-                <p class="card-text">한 번 밖에 안쓴 전기밥솥 팝니다. 부모님이 독립 할 때 주신 거에요!</p>
-                <a href="https://spartacodingclub.kr/" class="card-link stretched-link" target="_blank"></a>
-              </div>
+  </header>
+
+  <main class="container" style="max-width:960px">
+    <!-- 필터 -->
+    <section class="mb-3">
+      <input id="search" class="form-control mb-3" placeholder="🔍 찾는 물건을 검색해보세요 (예: 유모차, 블록)">
+      <div class="chip-row mb-2" id="typeFilter"></div>
+      <div class="chip-row mb-2" id="ageFilter"></div>
+      <div class="chip-row" id="catFilter"></div>
+    </section>
+
+    <!-- 상품 목록 -->
+    <section class="mb-5">
+      <div class="row g-3" id="itemList"></div>
+      <p id="empty" class="text-center text-muted py-5 d-none">조건에 맞는 물건이 아직 없어요 🥲</p>
+    </section>
+
+    <!-- 무인함 소개 -->
+    <section class="mb-5" id="locker">
+      <h4 class="fw-bold mb-1">📦 무인함 비대면 거래 <span class="badge bg-secondary align-middle">준비중</span></h4>
+      <p class="text-muted">시간 맞추기 어려운 엄마·아빠를 위해, 동네 무인함에 넣고 찾아가는 방식이에요.</p>
+      <div class="row g-3">
+        <div class="col-md-4"><div class="locker-step"><span class="num">1</span>
+          <h6 class="fw-bold mt-2">판매자가 무인함에 보관</h6><p class="meta mb-0">가까운 무인함을 고르고, 앱에서 받은 비밀번호로 물건을 넣어요.</p></div></div>
+        <div class="col-md-4"><div class="locker-step"><span class="num">2</span>
+          <h6 class="fw-bold mt-2">구매자에게 알림</h6><p class="meta mb-0">결제(또는 나눔 확정)가 되면 구매자에게 함 번호와 비밀번호가 전송돼요.</p></div></div>
+        <div class="col-md-4"><div class="locker-step"><span class="num">3</span>
+          <h6 class="fw-bold mt-2">편한 시간에 픽업</h6><p class="meta mb-0">24시간 아무 때나 찾아가고, 수령 확인되면 판매자에게 정산돼요.</p></div></div>
+      </div>
+    </section>
+  </main>
+
+  <button class="btn btn-main fab" data-bs-toggle="modal" data-bs-target="#writeModal">＋ 물건 올리기</button>
+
+  <!-- 글쓰기 모달 -->
+  <div class="modal fade" id="writeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <form class="modal-content" id="writeForm">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">물건 올리기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">거래 방식</label>
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="type" id="tFree" value="free" checked>
+            <label class="btn btn-outline-success" for="tFree">무료나눔</label>
+            <input type="radio" class="btn-check" name="type" id="tDonate" value="donate">
+            <label class="btn btn-outline-primary" for="tDonate">기부</label>
+            <input type="radio" class="btn-check" name="type" id="tCheap" value="cheap">
+            <label class="btn btn-outline-warning" for="tCheap">저렴하게</label>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">물건 이름</label>
+            <input name="title" class="form-control" required maxlength="40" placeholder="예: 원목 블록 세트">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold">카테고리</label>
+              <select name="cat" class="form-select" id="catSelect"></select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">사용 연령</label>
+              <select name="age" class="form-select" id="ageSelect"></select>
             </div>
           </div>
-          <div class="col-md-4 mb-4">
-            <div class="card">
-              <img src="https://source.unsplash.com/1600x900/?chair" class="card-img-top" alt="의자">
-              <div class="card-body">
-                <h5 class="card-title">의자</h5>
-                <h6 class="card-subtitle mb-2 text-muted">1만원</h6>
-                <p class="card-text">사무실에서 사용한 의자 팝니다. 조절 가능한 팔걸이가 달려있어요.</p>
-                <a href="https://spartacodingclub.kr/" class="card-link stretched-link" target="_blank"></a>
-              </div>
+          <div class="mb-3 d-none" id="priceBox">
+            <label class="form-label fw-semibold">가격 (원)</label>
+            <input name="price" type="number" min="0" step="500" max="100000" class="form-control" placeholder="예: 5000">
+            <div class="form-text">아이 물건은 부담 없게! 최대 10만원까지 올릴 수 있어요.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">상태</label>
+            <select name="cond" class="form-select">
+              <option>거의 새것</option><option selected>깨끗해요</option><option>사용감 있음</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">설명</label>
+            <textarea name="desc" class="form-control" rows="3" maxlength="300" placeholder="사용 기간, 구성품, 특이사항을 적어주세요"></textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold">동네</label>
+              <input name="town" class="form-control" required maxlength="15" placeholder="예: 역삼동">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">받는 방법</label>
+              <select name="method" class="form-select">
+                <option>직거래</option><option>무인함 (준비중)</option><option>문고리 거래</option>
+              </select>
             </div>
           </div>
-          <div class="col-md-4 mb-4">
-            <div class="card">
-              <img src="https://source.unsplash.com/1600x900/?laptop" class="card-img-top" alt="노트북">
-              <div class="card-body">
-                <h5 class="card-title">노트북</h5>
-                <h6 class="card-subtitle mb-2 text-muted">30만원</h6>
-                <p class="card-text">삼성 노트북 판매합니다. 사용기간은 1년 정도이며, 상태는 깨끗합니다.</p>
-                <a href="https://spartacodingclub.kr/" class="card-link stretched-link" target="_blank"></a>
-              </div>
-            </div>
+
+          <div class="p-3 rounded-3" style="background:#fff1e4">
+            <div class="fw-semibold mb-2">🧼 아이 안전 체크 (필수)</div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="c1" required>
+              <label class="form-check-label" for="c1">세척·소독을 했어요</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="c2" required>
+              <label class="form-check-label" for="c2">파손·작은 부품 빠짐이 없어요</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="c3" required>
+              <label class="form-check-label" for="c3">리콜 대상 제품이 아니에요</label></div>
           </div>
         </div>
-      </div>
-      
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-main w-100 py-2">등록하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const TYPES = { all: '전체', free: '무료나눔', donate: '기부', cheap: '저렴하게' };
+    const AGES = ['0~1세', '1~3세', '4~7세', '8세 이상'];
+    const CATS = { toy: ['장난감', '🧸'], book: ['그림책', '📚'], cloth: ['옷·신발', '👕'],
+      gear: ['유모차·카시트', '🚼'], baby: ['육아용품', '🍼'], ride: ['자전거·탈것', '🚲'] };
+
+    const SAMPLE = [
+      { id: 1, type: 'free', title: '원목 블록 세트 (60pcs)', cat: 'toy', age: '1~3세', cond: '깨끗해요', price: 0, town: '역삼동', method: '문고리 거래', desc: '아이가 커서 나눔해요. 알코올로 닦아뒀어요.' },
+      { id: 2, type: 'cheap', title: '휴대용 유모차', cat: 'gear', age: '0~1세', cond: '거의 새것', price: 30000, town: '삼성동', method: '직거래', desc: '여행용으로 3번 사용했어요. 레인커버 포함.' },
+      { id: 3, type: 'donate', title: '전래동화 전집 40권', cat: 'book', age: '4~7세', cond: '깨끗해요', price: 0, town: '대치동', method: '직거래', desc: '지역아동센터나 필요한 가정에 기부하고 싶어요.' },
+      { id: 4, type: 'free', title: '신생아 배냇저고리 5벌', cat: 'cloth', age: '0~1세', cond: '거의 새것', price: 0, town: '역삼동', method: '무인함 (준비중)', desc: '선물 받았는데 사이즈가 지나서 거의 못 입혔어요.' },
+      { id: 5, type: 'cheap', title: '보조바퀴 어린이 자전거 14인치', cat: 'ride', age: '4~7세', cond: '사용감 있음', price: 15000, town: '도곡동', method: '직거래', desc: '타이어 공기 넣으면 바로 탈 수 있어요.' },
+      { id: 6, type: 'cheap', title: '젖병 소독기', cat: 'baby', age: '0~1세', cond: '깨끗해요', price: 20000, town: '삼성동', method: '문고리 거래', desc: '1년 사용, 작동 잘 됩니다. 박스 있어요.' },
+    ];
+
+    const STORE_KEY = 'kidsmarket-items';
+    function loadMine() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; } }
+    function saveMine(list) { try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {} }
+
+    let items = [...loadMine(), ...SAMPLE];
+    const state = { type: 'all', age: '전체 연령', cat: 'all', q: '' };
+
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function chips(el, options, key) {
+      el.innerHTML = options.map(([v, label]) =>
+        `<button class="chip ${state[key] === v ? 'active' : ''}" data-v="${esc(v)}">${esc(label)}</button>`).join('');
+      el.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; state[key] = b.dataset.v; renderFilters(); renderItems(); };
+    }
+
+    function renderFilters() {
+      chips(document.getElementById('typeFilter'), Object.entries(TYPES), 'type');
+      chips(document.getElementById('ageFilter'), [['전체 연령', '전체 연령'], ...AGES.map(a => [a, a])], 'age');
+      chips(document.getElementById('catFilter'), [['all', '전체 카테고리'], ...Object.entries(CATS).map(([k, [n, i]]) => [k, `${i} ${n}`])], 'cat');
+    }
+
+    function priceLabel(it) {
+      if (it.type === 'free') return '<span class="text-success">무료나눔</span>';
+      if (it.type === 'donate') return '<span style="color:var(--donate)">기부</span>';
+      return Number(it.price).toLocaleString('ko-KR') + '원';
+    }
+
+    function renderItems() {
+      const q = state.q.trim();
+      const list = items.filter(it =>
+        (state.type === 'all' || it.type === state.type) &&
+        (state.age === '전체 연령' || it.age === state.age) &&
+        (state.cat === 'all' || it.cat === state.cat) &&
+        (!q || (it.title + it.desc).includes(q)));
+
+      document.getElementById('itemList').innerHTML = list.map(it => `
+        <div class="col-6 col-md-4">
+          <div class="card item-card">
+            <div class="item-thumb">${CATS[it.cat][1]}</div>
+            <div class="card-body p-3">
+              <span class="badge badge-${it.type} mb-1">${TYPES[it.type]}</span>
+              <span class="badge bg-light text-dark mb-1">${esc(it.age)}</span>
+              <h6 class="fw-bold mb-1 text-truncate">${esc(it.title)}</h6>
+              <div class="price mb-1">${priceLabel(it)}</div>
+              <p class="small text-secondary mb-1" style="min-height:38px">${esc(it.desc)}</p>
+              <div class="meta">📍 ${esc(it.town)} · ${esc(it.method)} · ${esc(it.cond)}</div>
+            </div>
+          </div>
+        </div>`).join('');
+      document.getElementById('empty').classList.toggle('d-none', list.length > 0);
+
+      document.getElementById('statFree').textContent = items.filter(i => i.type === 'free').length;
+      document.getElementById('statDonate').textContent = items.filter(i => i.type === 'donate').length;
+      document.getElementById('statCheap').textContent = items.filter(i => i.type === 'cheap').length;
+    }
+
+    // 글쓰기 폼
+    const form = document.getElementById('writeForm');
+    document.getElementById('catSelect').innerHTML = Object.entries(CATS).map(([k, [n, i]]) => `<option value="${k}">${i} ${n}</option>`).join('');
+    document.getElementById('ageSelect').innerHTML = AGES.map(a => `<option>${a}</option>`).join('');
+    form.querySelectorAll('input[name=type]').forEach(r => r.addEventListener('change', () => {
+      const cheap = form.type.value === 'cheap';
+      document.getElementById('priceBox').classList.toggle('d-none', !cheap);
+      form.price.required = cheap;
+    }));
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const f = new FormData(form);
+      const item = Object.fromEntries(f.entries());
+      item.id = Date.now();
+      item.price = item.type === 'cheap' ? Number(item.price || 0) : 0;
+      const mine = loadMine(); mine.unshift(item); saveMine(mine);
+      items.unshift(item);
+      form.reset(); document.getElementById('priceBox').classList.add('d-none');
+      bootstrap.Modal.getInstance(document.getElementById('writeModal')).hide();
+      state.type = 'all'; state.age = '전체 연령'; state.cat = 'all';
+      renderFilters(); renderItems();
+    });
+
+    document.getElementById('search').addEventListener('input', e => { state.q = e.target.value; renderItems(); });
+
+    renderFilters();
+    renderItems();
+  </script>
 </body>
 
 </html>
