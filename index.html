@@ -19,7 +19,7 @@
       --cheap: #ff8a3d;
       --bg: #fffaf5;
     }
-    body { background: var(--bg); font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    body { word-break: keep-all; background: var(--bg); font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
     .hero { background: linear-gradient(135deg, #ffb36b, #ff8a3d); color: #fff; border-radius: 0 0 28px 28px; }
     .hero h1 { font-weight: 800; }
     .btn-main { background: var(--main); color: #fff; border: none; }
@@ -38,6 +38,11 @@
     .locker-step .num { width: 32px; height: 32px; border-radius: 50%; background: var(--main); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
     .fab { position: fixed; right: 18px; bottom: 22px; border-radius: 999px; padding: 14px 20px; font-weight: 700; box-shadow: 0 6px 18px rgba(255,138,61,.45); z-index: 10; }
     .stat { font-size: 26px; font-weight: 800; }
+    .tier-card { background: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    .tier-emoji { font-size: 40px; width: 56px; height: 56px; border-radius: 50%; background: #fff1e4; display: flex; align-items: center; justify-content: center; }
+    .lock-note { font-size: 12px; color: #b5651d; background: #fff1e4; border-radius: 8px; padding: 4px 8px; margin-top: 6px; }
+    .toast-msg { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(30,30,30,.92); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; z-index: 2000; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+    .toast-msg.show { opacity: 1; }
   </style>
 </head>
 
@@ -55,6 +60,31 @@
   </header>
 
   <main class="container" style="max-width:960px">
+    <!-- 내 등급 -->
+    <section class="mb-4">
+      <div class="tier-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="tier-emoji" id="tierEmoji">🌱</div>
+          <div class="flex-grow-1">
+            <div class="meta mb-0">내 나눔 등급</div>
+            <div class="fw-bold fs-5"><span id="tierName">새싹</span> · <span id="tierPoints">0</span>점</div>
+            <div class="progress mt-1" style="height:8px"><div class="progress-bar" id="tierBar" style="background:var(--main);width:0%"></div></div>
+            <div class="meta mt-1" id="tierNext"></div>
+          </div>
+        </div>
+        <details class="mt-2">
+          <summary class="meta">⭐ 우선 선택권이 뭔가요?</summary>
+          <div class="small text-secondary mt-2">
+            나눔·기부를 많이 한 이웃이 새로 올라온 <b>무료나눔·기부 물건을 먼저 신청</b>할 수 있어요.<br>
+            🌲 <b>숲</b> (15점 이상): 올라오자마자 바로 신청<br>
+            🌳 <b>나무</b> (5점 이상): 올라오고 3시간 뒤부터<br>
+            🌱 <b>새싹</b>: 올라오고 12시간 뒤부터<br>
+            점수: 무료나눔·기부 1건 = 3점, 저렴하게 판매 1건 = 1점
+          </div>
+        </details>
+      </div>
+    </section>
+
     <!-- 필터 -->
     <section class="mb-3">
       <input id="search" class="form-control mb-3" placeholder="🔍 찾는 물건을 검색해보세요 (예: 유모차, 블록)">
@@ -83,6 +113,9 @@
       </div>
     </section>
   </main>
+
+  <footer class="text-center meta pb-5 mb-5">키즈나눔마켓 베타 · 수수료 없는 비영리 시범 운영 중</footer>
+  <div class="toast-msg" id="toast"></div>
 
   <button class="btn btn-main fab" data-bs-toggle="modal" data-bs-target="#writeModal">＋ 물건 올리기</button>
 
@@ -171,19 +204,70 @@
       gear: ['유모차·카시트', '🚼'], baby: ['육아용품', '🍼'], ride: ['자전거·탈것', '🚲'] };
 
     const SAMPLE = [
-      { id: 1, type: 'free', title: '원목 블록 세트 (60pcs)', cat: 'toy', age: '1~3세', cond: '깨끗해요', price: 0, town: '역삼동', method: '문고리 거래', desc: '아이가 커서 나눔해요. 알코올로 닦아뒀어요.' },
-      { id: 2, type: 'cheap', title: '휴대용 유모차', cat: 'gear', age: '0~1세', cond: '거의 새것', price: 30000, town: '삼성동', method: '직거래', desc: '여행용으로 3번 사용했어요. 레인커버 포함.' },
-      { id: 3, type: 'donate', title: '전래동화 전집 40권', cat: 'book', age: '4~7세', cond: '깨끗해요', price: 0, town: '대치동', method: '직거래', desc: '지역아동센터나 필요한 가정에 기부하고 싶어요.' },
-      { id: 4, type: 'free', title: '신생아 배냇저고리 5벌', cat: 'cloth', age: '0~1세', cond: '거의 새것', price: 0, town: '역삼동', method: '무인함 (준비중)', desc: '선물 받았는데 사이즈가 지나서 거의 못 입혔어요.' },
-      { id: 5, type: 'cheap', title: '보조바퀴 어린이 자전거 14인치', cat: 'ride', age: '4~7세', cond: '사용감 있음', price: 15000, town: '도곡동', method: '직거래', desc: '타이어 공기 넣으면 바로 탈 수 있어요.' },
-      { id: 6, type: 'cheap', title: '젖병 소독기', cat: 'baby', age: '0~1세', cond: '깨끗해요', price: 20000, town: '삼성동', method: '문고리 거래', desc: '1년 사용, 작동 잘 됩니다. 박스 있어요.' },
+      { id: 1, hoursAgo: 1, type: 'free', title: '원목 블록 세트 (60pcs)', cat: 'toy', age: '1~3세', cond: '깨끗해요', price: 0, town: '역삼동', method: '문고리 거래', desc: '아이가 커서 나눔해요. 알코올로 닦아뒀어요.' },
+      { id: 2, hoursAgo: 26, type: 'cheap', title: '휴대용 유모차', cat: 'gear', age: '0~1세', cond: '거의 새것', price: 30000, town: '삼성동', method: '직거래', desc: '여행용으로 3번 사용했어요. 레인커버 포함.' },
+      { id: 3, hoursAgo: 8, type: 'donate', title: '전래동화 전집 40권', cat: 'book', age: '4~7세', cond: '깨끗해요', price: 0, town: '대치동', method: '직거래', desc: '지역아동센터나 필요한 가정에 기부하고 싶어요.' },
+      { id: 4, hoursAgo: 30, type: 'free', title: '신생아 배냇저고리 5벌', cat: 'cloth', age: '0~1세', cond: '거의 새것', price: 0, town: '역삼동', method: '무인함 (준비중)', desc: '선물 받았는데 사이즈가 지나서 거의 못 입혔어요.' },
+      { id: 5, hoursAgo: 50, type: 'cheap', title: '보조바퀴 어린이 자전거 14인치', cat: 'ride', age: '4~7세', cond: '사용감 있음', price: 15000, town: '도곡동', method: '직거래', desc: '타이어 공기 넣으면 바로 탈 수 있어요.' },
+      { id: 6, hoursAgo: 4, type: 'cheap', title: '젖병 소독기', cat: 'baby', age: '0~1세', cond: '깨끗해요', price: 20000, town: '삼성동', method: '문고리 거래', desc: '1년 사용, 작동 잘 됩니다. 박스 있어요.' },
     ];
 
+    const HOUR = 3600 * 1000;
+    SAMPLE.forEach(it => { it.createdAt = Date.now() - it.hoursAgo * HOUR; });
+
+    // 등급: 점수 기준과 우선 신청 대기 시간
+    const TIERS = [
+      { name: '숲', emoji: '🌲', min: 15, waitH: 0 },
+      { name: '나무', emoji: '🌳', min: 5, waitH: 3 },
+      { name: '새싹', emoji: '🌱', min: 0, waitH: 12 },
+    ];
+    const POINTS = { free: 3, donate: 3, cheap: 1 };
+
     const STORE_KEY = 'kidsmarket-items';
+    const APPLY_KEY = 'kidsmarket-applied';
+    function loadApplied() { try { return JSON.parse(localStorage.getItem(APPLY_KEY)) || []; } catch (e) { return []; } }
+    function saveApplied(list) { try { localStorage.setItem(APPLY_KEY, JSON.stringify(list)); } catch (e) {} }
+    let applied = loadApplied();
+
+    function myPoints() { return items.filter(i => i.mine).reduce((sum, i) => sum + POINTS[i.type], 0); }
+    function myTier() { const p = myPoints(); return TIERS.find(t => p >= t.min); }
+
+    // 이 물건을 지금 신청할 수 있는지, 아니면 몇 시간 남았는지
+    function waitLeftH(it) {
+      if (it.type === 'cheap' || it.mine) return 0;
+      const openAt = it.createdAt + myTier().waitH * HOUR;
+      return Math.max(0, Math.ceil((openAt - Date.now()) / HOUR));
+    }
+
+    function renderTier() {
+      const p = myPoints(), t = myTier(), idx = TIERS.indexOf(t), next = TIERS[idx - 1];
+      document.getElementById('tierEmoji').textContent = t.emoji;
+      document.getElementById('tierName').textContent = t.name;
+      document.getElementById('tierPoints').textContent = p;
+      document.getElementById('tierBar').style.width = next ? Math.round((p - t.min) / (next.min - t.min) * 100) + '%' : '100%';
+      document.getElementById('tierNext').textContent = next
+        ? `${next.min - p}점 더 모으면 ${next.emoji} ${next.name} 등급! (새 나눔 물건 ${next.waitH === 0 ? '바로' : next.waitH + '시간 뒤'} 신청)`
+        : '최고 등급이에요! 새 나눔 물건을 가장 먼저 신청할 수 있어요 🎉';
+    }
+
+    let toastTimer;
+    function toast(msg) {
+      const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function actionButton(it) {
+      if (it.mine) return '<button class="btn btn-sm btn-light w-100 mt-2" disabled>내가 올린 물건</button>';
+      if (it.type === 'cheap') return `<button class="btn btn-sm btn-outline-secondary w-100 mt-2" data-act="ask" data-id="${it.id}">💬 구매 문의</button>`;
+      if (applied.includes(it.id)) return '<button class="btn btn-sm btn-success w-100 mt-2" disabled>✓ 신청 완료</button>';
+      const left = waitLeftH(it);
+      if (left > 0) return `<div class="lock-note">⭐ 우선권 회원 먼저 신청 중<br>${myTier().emoji} ${left}시간 뒤 신청 가능</div>`;
+      return `<button class="btn btn-sm btn-main w-100 mt-2" data-act="apply" data-id="${it.id}">🙋 신청하기</button>`;
+    }
     function loadMine() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; } }
     function saveMine(list) { try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {} }
 
-    let items = [...loadMine(), ...SAMPLE];
+    let items = [...loadMine().map(i => ({ ...i, mine: true, createdAt: i.createdAt || i.id })), ...SAMPLE];
     const state = { type: 'all', age: '전체 연령', cat: 'all', q: '' };
 
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -225,6 +309,7 @@
               <div class="price mb-1">${priceLabel(it)}</div>
               <p class="small text-secondary mb-1" style="min-height:38px">${esc(it.desc)}</p>
               <div class="meta">📍 ${esc(it.town)} · ${esc(it.method)} · ${esc(it.cond)}</div>
+              ${actionButton(it)}
             </div>
           </div>
         </div>`).join('');
@@ -233,7 +318,19 @@
       document.getElementById('statFree').textContent = items.filter(i => i.type === 'free').length;
       document.getElementById('statDonate').textContent = items.filter(i => i.type === 'donate').length;
       document.getElementById('statCheap').textContent = items.filter(i => i.type === 'cheap').length;
+      renderTier();
     }
+
+    document.getElementById('itemList').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]'); if (!b) return;
+      const id = Number(b.dataset.id);
+      if (b.dataset.act === 'apply') {
+        applied.push(id); saveApplied(applied); renderItems();
+        toast('신청했어요! 나눔하는 분이 받는 사람을 정하면 알려드릴게요');
+      } else {
+        toast('채팅 기능은 다음 단계에서 열려요');
+      }
+    });
 
     // 글쓰기 폼
     const form = document.getElementById('writeForm');
@@ -250,13 +347,18 @@
       const f = new FormData(form);
       const item = Object.fromEntries(f.entries());
       item.id = Date.now();
+      item.createdAt = Date.now();
+      item.mine = true;
       item.price = item.type === 'cheap' ? Number(item.price || 0) : 0;
+      const before = myTier();
       const mine = loadMine(); mine.unshift(item); saveMine(mine);
       items.unshift(item);
+      const after = myTier();
       form.reset(); document.getElementById('priceBox').classList.add('d-none');
       bootstrap.Modal.getInstance(document.getElementById('writeModal')).hide();
       state.type = 'all'; state.age = '전체 연령'; state.cat = 'all';
       renderFilters(); renderItems();
+      toast(after !== before ? `축하해요! ${after.emoji} ${after.name} 등급이 됐어요` : `등록 완료! +${POINTS[item.type]}점`);
     });
 
     document.getElementById('search').addEventListener('input', e => { state.q = e.target.value; renderItems(); });
