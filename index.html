@@ -137,11 +137,12 @@
     <div class="modal-dialog modal-dialog-scrollable">
       <form class="modal-content" id="writeForm">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold">물건 올리기</h5>
+          <h5 class="modal-title fw-bold" id="writeTitle">물건 올리기</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <label class="form-label fw-semibold">거래 방식</label>
+          <div class="form-text mt-0 mb-2 d-none" id="lockedNote">🔒 받을 분이 정해져서 거래 방식과 가격은 바꿀 수 없어요</div>
           <div class="btn-group w-100 mb-3" role="group">
             <input type="radio" class="btn-check" name="type" id="tFree" value="free" checked>
             <label class="btn btn-outline-success" for="tFree">무료나눔</label>
@@ -156,6 +157,7 @@
             <div class="d-flex align-items-center gap-3">
               <img id="photoPreview" class="photo-preview d-none" alt="">
               <label class="btn btn-outline-secondary mb-0" for="photoInput">📷 사진 고르기</label>
+              <button type="button" class="btn btn-link text-danger p-0 d-none" id="photoRemove">사진 빼기</button>
               <input type="file" id="photoInput" accept="image/*" class="d-none">
             </div>
           </div>
@@ -310,6 +312,7 @@
     let recvItems = [];     // 내가 받기로 한 물건
     let userUnsubs = [];
     let chat = { id: null, unsub: null, msgs: [] };
+    let myOpen = false;     // "내 거래" 창이 열려 있는지 (열리는 중 포함)
     const state = { type: 'all', age: '전체 연령', cat: 'all', q: '' };
 
     let toastTimer;
@@ -397,7 +400,10 @@
       const btn = (cls, act, text) => `<button class="btn btn-sm ${cls} w-100 mt-2" data-act="${act}" data-id="${esc(it.id)}">${text}</button>`;
       if (!fb) return btn('btn-main', 'demo', label);
       if (!user) return btn('btn-main', 'login', label);
-      if (it.ownerId === user.uid) return btn('btn-light', 'my', `내 물건 · 신청 ${Object.keys(it.applicants || {}).length}명`);
+      if (it.ownerId === user.uid)
+        return `<div class="d-flex gap-1 mt-2">
+          <button class="btn btn-sm btn-light flex-grow-1" data-act="my" data-id="${esc(it.id)}">신청 ${Object.keys(it.applicants || {}).length}명</button>
+          <button class="btn btn-sm btn-outline-secondary" data-act="edit" data-id="${esc(it.id)}">✏️ 수정</button></div>`;
       if (it.status === 'reserved')
         return it.receiverId === user.uid ? btn('btn-success', 'chat', '💬 대화하기') : '<button class="btn btn-sm btn-secondary w-100 mt-2" disabled>예약 중</button>';
       if ((it.applicants || {})[user.uid]) return '<button class="btn btn-sm btn-success w-100 mt-2" disabled>✓ 신청 완료</button>';
@@ -425,7 +431,7 @@
               <h6 class="fw-bold mb-1 text-truncate">${esc(it.title)}</h6>
               <div class="price mb-1">${priceLabel(it)}</div>
               <p class="small text-secondary mb-1" style="min-height:38px">${esc(it.desc)}</p>
-              <div class="meta">📍 ${esc(it.town)} · ${esc(it.method)} · ${esc(it.cond)}</div>
+              <div class="meta">📍 ${esc(it.town)} · ${esc(it.method)} · ${esc(it.cond)}${it.updatedAt ? ' · 수정됨' : ''}</div>
               ${actionButton(it)}
             </div>
           </div>
@@ -459,10 +465,10 @@
                   ${smallBtn('btn-main', 'choose', it.id, '이 분께 드릴게요', `data-uid="${esc(uid)}"`)}
                 </div>`).join('')
             : '<div class="meta">아직 신청한 이웃이 없어요</div>';
-          body += `<div class="text-end mt-2">${smallBtn('btn-link text-danger p-0', 'delete', it.id, '글 내리기')}</div>`;
+          body += `<div class="d-flex justify-content-end gap-3 mt-2">${smallBtn('btn-link p-0', 'edit', it.id, '✏️ 수정')}${smallBtn('btn-link text-danger p-0', 'delete', it.id, '글 내리기')}</div>`;
         } else if (it.status === 'reserved') {
           body = `<div class="mb-2">${esc(it.receiverName)}님과 거래 중이에요</div>
-            <div class="d-flex gap-2">${smallBtn('btn-success', 'chat', it.id, '💬 대화하기')}${smallBtn('btn-outline-secondary', 'cancel', it.id, '예약 취소')}</div>`;
+            <div class="d-flex gap-2 flex-wrap">${smallBtn('btn-success', 'chat', it.id, '💬 대화하기')}${smallBtn('btn-outline-secondary', 'edit', it.id, '✏️ 수정')}${smallBtn('btn-outline-secondary', 'cancel', it.id, '예약 취소')}</div>`;
         } else {
           body = `<div class="meta">${esc(it.receiverName)}님께 전달 완료 · <b style="color:var(--main)">+${POINTS[it.type]}점</b></div>`;
         }
@@ -544,8 +550,9 @@
       if (a === 'demo') return toast('지금은 미리보기예요. 곧 실제로 신청할 수 있어요!');
       if (a === 'login') return login();
       if (a === 'logout') return fb.A.signOut(fb.auth);
-      if (a === 'my') { renderMy(); return modal('myModal').show(); }
+      if (a === 'my') { myOpen = true; renderMy(); return modal('myModal').show(); }
       if (a === 'chat') return openChat(id);
+      if (a === 'edit') return openEdit(id);
 
       const { F, db } = fb, ref = () => F.doc(db, 'items', id), it = findItem(id);
       if (a === 'apply') {
@@ -583,11 +590,57 @@
       await run(() => F.addDoc(F.collection(db, 'items', chat.id, 'messages'),
         { uid: user.uid, name: user.name, text, createdAt: F.serverTimestamp() }), null, '메시지를 보내지 못했어요');
     });
+    $('myModal').addEventListener('hide.bs.modal', () => { myOpen = false; });
     $('chatModal').addEventListener('hidden.bs.modal', () => { if (chat.unsub) chat.unsub(); chat = { id: null, unsub: null, msgs: [] }; });
 
     // ===== 글쓰기 =====
     const form = $('writeForm');
     let photoData = '';
+    let editingId = null;   // 수정 중인 물건 id (새로 올릴 때는 null)
+
+    function setPhoto(data) {
+      photoData = data || '';
+      $('photoPreview').classList.toggle('d-none', !photoData);
+      $('photoRemove').classList.toggle('d-none', !photoData);
+      if (photoData) $('photoPreview').src = photoData; else $('photoPreview').removeAttribute('src');
+    }
+    function resetForm() {
+      form.reset(); setPhoto(''); editingId = null;
+      $('photoInput').value = '';
+      $('writeTitle').textContent = '물건 올리기';
+      $('submitBtn').textContent = '등록하기';
+      $('lockedNote').classList.add('d-none');
+      form.querySelectorAll('input[name=type], input[name=price]').forEach(el => { el.disabled = false; });
+      $('priceBox').classList.add('d-none'); form.price.required = false;
+    }
+    $('photoRemove').addEventListener('click', () => { setPhoto(''); $('photoInput').value = ''; });
+    $('writeModal').addEventListener('hidden.bs.modal', resetForm);
+
+    function openEdit(id) {
+      const it = findItem(id);
+      if (!it || !user || it.ownerId !== user.uid || it.status === 'done') return toast('수정할 수 없는 글이에요');
+      resetForm();
+      editingId = id;
+      $('writeTitle').textContent = '물건 수정하기';
+      $('submitBtn').textContent = '수정 완료';
+      form.querySelector(`input[name=type][value="${it.type}"]`).checked = true;
+      for (const k of ['title', 'cat', 'age', 'cond', 'desc', 'town', 'method']) form.elements.namedItem(k).value = it[k] ?? '';
+      const cheap = it.type === 'cheap';
+      $('priceBox').classList.toggle('d-none', !cheap);
+      form.price.value = cheap ? it.price : ''; form.price.required = cheap;
+      if (it.status === 'reserved') {
+        form.querySelectorAll('input[name=type], input[name=price]').forEach(el => { el.disabled = true; });
+        form.price.required = false;
+        $('lockedNote').classList.remove('d-none');
+      }
+      setPhoto(typeof it.photo === 'string' && it.photo.startsWith('data:image/jpeg;base64,') ? it.photo : '');
+      ['c1', 'c2', 'c3'].forEach(c => { $(c).checked = true; });
+      const show = () => modal('writeModal').show();
+      if ($('myModal').classList.contains('show')) {
+        $('myModal').addEventListener('hidden.bs.modal', show, { once: true });
+        modal('myModal').hide();
+      } else show();
+    }
     $('catSelect').innerHTML = Object.entries(CATS).map(([k, [n, i]]) => `<option value="${k}">${i} ${n}</option>`).join('');
     $('ageSelect').innerHTML = AGES.map(a => `<option>${a}</option>`).join('');
     form.querySelectorAll('input[name=type]').forEach(r => r.addEventListener('change', () => {
@@ -617,15 +670,15 @@
     }
     $('photoInput').addEventListener('change', async e => {
       const file = e.target.files[0];
-      photoData = ''; $('photoPreview').classList.add('d-none');
       if (!file) return;
-      try { photoData = await shrinkPhoto(file); $('photoPreview').src = photoData; $('photoPreview').classList.remove('d-none'); }
+      try { setPhoto(await shrinkPhoto(file)); }
       catch (err) { toast('사진을 읽지 못했어요. 다른 사진을 골라주세요'); }
     });
 
     $('writeBtn').addEventListener('click', () => {
       if (!fb) return toast('지금은 미리보기예요. 곧 물건을 올릴 수 있어요!');
       if (!user) { toast('물건을 올리려면 먼저 로그인해 주세요'); return login(); }
+      resetForm();
       modal('writeModal').show();
     });
 
@@ -634,20 +687,28 @@
       if (!fb || !user) return;
       const f = Object.fromEntries(new FormData(form).entries());
       const { F, db } = fb;
-      const data = {
-        type: f.type, title: f.title.trim(), cat: f.cat, age: f.age, cond: f.cond,
-        price: f.type === 'cheap' ? Math.min(100000, Math.max(0, Math.round(Number(f.price) || 0))) : 0,
+      const editing = editingId ? findItem(editingId) : null;
+      // 예약 중인 글은 거래 방식·가격 칸이 잠겨 있어서, 원래 값을 그대로 써요
+      const type = editing && editing.status === 'reserved' ? editing.type : f.type;
+      const price = editing && editing.status === 'reserved' ? editing.price
+        : (type === 'cheap' ? Math.min(100000, Math.max(0, Math.round(Number(f.price) || 0))) : 0);
+      const content = {
+        type, price, title: f.title.trim(), cat: f.cat, age: f.age, cond: f.cond,
         desc: (f.desc || '').trim(), town: f.town.trim(), method: f.method, photo: photoData,
-        ownerId: user.uid, ownerName: user.name, status: 'open', receiverId: null, receiverName: null,
-        applicants: {}, createdAt: F.serverTimestamp(),
       };
       $('submitBtn').disabled = true;
-      const ok = await run(() => F.addDoc(F.collection(db, 'items'), data),
-        '등록했어요! 받은 분이 "받았어요"를 누르면 점수가 쌓여요', '등록하지 못했어요. 잠시 뒤 다시 해주세요');
+      const ok = editing
+        ? await run(() => F.updateDoc(F.doc(db, 'items', editingId), { ...content, updatedAt: F.serverTimestamp() }),
+            '수정했어요!', '수정하지 못했어요. 잠시 뒤 다시 해주세요')
+        : await run(() => F.addDoc(F.collection(db, 'items'), {
+            ...content, ownerId: user.uid, ownerName: user.name, status: 'open', receiverId: null, receiverName: null,
+            applicants: {}, createdAt: F.serverTimestamp(),
+          }), '등록했어요! 받은 분이 "받았어요"를 누르면 점수가 쌓여요', '등록하지 못했어요. 잠시 뒤 다시 해주세요');
       $('submitBtn').disabled = false;
       if (!ok) return;
-      form.reset(); photoData = ''; $('photoPreview').classList.add('d-none'); $('priceBox').classList.add('d-none');
+      const wasEditing = !!editing;
       modal('writeModal').hide();
+      if (wasEditing) return;
       state.type = 'all'; state.age = '전체 연령'; state.cat = 'all';
       render();
     });
@@ -656,7 +717,7 @@
 
     function render() {
       renderAuth(); renderTier(); renderFilters(); renderItems();
-      if ($('myModal').classList.contains('show')) renderMy();
+      if (myOpen) renderMy();
       if (chat.id) renderChat();
     }
 
